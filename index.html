@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8" />
+<title>2D Platformer Game-New Year Easter Egg</title>
+
+<style>
+  :root {
+    --scale: 1;
+    --pixel: min(4px, calc(100vw / 240), calc(100vh / 135));
+    --sky: #255169;
+    --ground: #e6f3ff;
+    --flag-red: #00ba13;
+    --coin-gold: #f5c542;
+  }
+
+  * {
+    box-sizing: border-box;
+    image-rendering: pixelated;
+  }
+
+  body {
+    margin: 0;
+    background: #0b132b;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: monospace;
+  }
+
+  #game {
+  width: calc(240 * var(--pixel));
+  height: calc(135 * var(--pixel));
+  background: radial-gradient(circle at top right, #111 0%, #000 100%);
+  position: relative;
+  overflow: hidden;
+  border: 4px solid #fff;
+
+}
+
+  /* Snow background */
+  /* Ground */
+  .ground {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: calc(20 * var(--pixel));
+    background: var(--ground);
+    border-top: 2px solid #bcdcff;
+  }
+
+  /* Player */
+  .player {
+    position: absolute;
+    width: calc(8 * var(--pixel));
+    height: calc(8 * var(--pixel));
+    background: #ff0000;
+    border-radius: 50%;
+  }
+
+  /* Coin */
+  .coin {
+    position: absolute;
+    width: calc(6 * var(--pixel));
+    height: calc(6 * var(--pixel));
+    background: var(--coin-gold);
+    border-radius: 50%;
+    box-shadow: inset -2px -2px rgba(0,0,0,0.25);
+  }
+
+  /* Flag */
+  .flag {
+    position: absolute;
+    bottom: calc(20 * var(--pixel));
+    width: calc(2 * var(--pixel));
+    height: calc(24 * var(--pixel));
+    background: #333;
+  }
+
+  .flag::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: calc(2 * var(--pixel));
+    width: calc(10 * var(--pixel));
+    height: calc(6 * var(--pixel));
+    background: var(--flag-red);
+  }
+
+  /* Win text */
+  #message {
+    position: absolute;
+    inset: 0;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    font-size: calc(10 * var(--pixel));
+    text-align: center;
+    letter-spacing: 2px;
+  }
+
+  .falling-snow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+
+  /* Bigger snowflakes */
+  background-image:
+    radial-gradient(#fff 2px, transparent 2px),
+    radial-gradient(#fff 3px, transparent 3px),
+    radial-gradient(#fff 4px, transparent 4px);
+
+  background-size:
+    40px 40px,
+    60px 60px,
+    90px 90px;
+
+  animation: 
+  snow-layer1 18s linear infinite,
+  snow-layer2 26s linear infinite,
+  snow-layer3 34s linear infinite;
+  opacity: 0.6;
+  
+  animation-timing-function: linear, ease-in-out, ease-in;
+
+  background-image:
+  radial-gradient(#fff 1.5px, transparent 2px),
+  radial-gradient(#fff 2.5px, transparent 3px),
+  radial-gradient(#fff 3.5px, transparent 4px);
+
+}
+
+
+@keyframes snow-layer1 {
+  from { background-position: 0px -40px; }
+  to   { background-position: -120px 200px; }
+}
+
+@keyframes snow-layer2 {
+  from { background-position: 40px -80px; }
+  to   { background-position: -160px 260px; }
+}
+
+@keyframes snow-layer3 {
+  from { background-position: 80px -120px; }
+  to   { background-position: -220px 320px; }
+}
+
+@media (max-width: 480px) {
+  .falling-snow {
+    opacity: 0.4;
+  }
+}
+
+.moon {
+  position: absolute;
+  top: 20px;
+  right: 30px;
+  width: calc(16 * var(--pixel));
+  height: calc(16 * var(--pixel));
+  background: radial-gradient(circle at 30% 30%, #fff 0%, #ddd 60%, #aaa 80%, transparent 100%);
+  border-radius: 50%;
+  box-shadow: 0 0 12px 2px rgba(255,255,255,0.6);
+
+  /* Add subtle craters with pseudo-elements */
+}
+
+.moon::before,
+.moon::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(200,200,200,0.3);
+}
+
+/* crater 1 */
+.moon::before {
+  width: 25%;
+  height: 25%;
+  top: 20%;
+  left: 30%;
+}
+
+/* crater 2 */
+.moon::after {
+  width: 15%;
+  height: 15%;
+  top: 55%;
+  left: 60%;
+}
+
+/* =========================
+   Mobile Touch Controls
+========================= */
+#touch-controls {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  display: none;
+}
+
+/* Buttons */
+#touch-controls div {
+  pointer-events: auto;
+  position: absolute;
+  width: 64px;
+  height: 64px;
+  background: rgba(255,255,255,0.15);
+  border: 2px solid rgba(255,255,255,0.8);
+  color: #fff;
+  font-size: 24px;
+  font-family: monospace;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 14px;
+  user-select: none;
+}
+
+/* Positions */
+.touch-left {
+  left: 20px;
+  bottom: 20px;
+}
+
+.touch-right {
+  left: 100px;
+  bottom: 20px;
+}
+
+.touch-jump {
+  right: 20px;
+  bottom: 20px;
+}
+
+/* Show only on touch devices */
+@media (hover: none) and (pointer: coarse) {
+  #touch-controls {
+    display: block;
+  }
+}
+
+.bg-text {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: calc(18 * var(--pixel));
+  font-weight: bold;
+  color: #052afa; /* warm yellow */
+  letter-spacing: 2px;
+  opacity: 0.80;
+  text-shadow:
+    2px 2px rgba(0, 0, 0, 0.4),
+    -2px -2px rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+
+</style>
+</head>
+
+<body>
+<div id="game">
+  <div class="bg-text">Goodbye 2025</div>
+  <div class="falling-snow"></div>
+  <div class="player" id="player"></div>
+  <div class="coin" id="coin"></div>
+  <div class="moon"></div>
+  <div class="flag" id="flag"></div>
+  <div class="ground"></div>
+  <div id="message">
+    🎉 HAPPY NEW YEAR 2026 🎉
+  </div>
+  <!-- Mobile Touch Controls -->
+<div id="touch-controls">
+  <div class="touch-left">◀</div>
+  <div class="touch-right">▶</div>
+  <div class="touch-jump">⬆</div>
+</div>
+
+</div>
+
+<script>
+
+/* =========================
+   Constants
+========================= */
+const GRAVITY = 0.6;
+const JUMP_FORCE = -7;
+const MOVE_SPEED = 1.3;
+const GROUND_HEIGHT = 22;
+const WORLD_HEIGHT = 135;
+
+/* =========================
+   Player
+========================= */
+const player = {
+  x: 20,
+  y: 0,
+  vx: 0,
+  vy: 0,
+  radius: 4,
+  onGround: false
+};
+
+/* =========================
+   Objects
+========================= */
+const coin = { x: 120, y: 78, collected: false };
+const flagX = 200;
+
+/* =========================
+   DOM
+========================= */
+const playerEl = document.getElementById("player");
+const coinEl = document.getElementById("coin");
+const flagEl = document.getElementById("flag");
+const messageEl = document.getElementById("message");
+
+function makeBeepData(beeps = 3) {
+  const sampleRate = 44100;
+  const freq = 440;
+  const beepTime = 0.12;
+  const gapTime = 0.08;
+
+  const samples = [];
+
+  const addTone = t => {
+    const len = Math.floor(t * sampleRate);
+    for (let i = 0; i < len; i++) {
+      samples.push(Math.sin(2 * Math.PI * freq * i / sampleRate));
+    }
+  };
+
+  const addSilence = t => {
+    const len = Math.floor(t * sampleRate);
+    for (let i = 0; i < len; i++) samples.push(0);
+  };
+
+  for (let i = 0; i < beeps; i++) {
+    addTone(beepTime);
+    addSilence(gapTime);
+  }
+
+  const buffer = new ArrayBuffer(44 + samples.length * 2);
+  const view = new DataView(buffer);
+
+  const write = (o, s) => [...s].forEach((c, i) => view.setUint8(o + i, c.charCodeAt(0)));
+
+  write(0, "RIFF");
+  view.setUint32(4, 36 + samples.length * 6, true);
+  write(8, "WAVEfmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  write(36, "data");
+  view.setUint32(40, samples.length * 2, true);
+
+  let offset = 44;
+  samples.forEach(s => {
+    view.setInt16(offset, s * 0x7fff, true);
+    offset += 2;
+  });
+
+  return "data:audio/wav;base64," +
+    btoa(String.fromCharCode(...new Uint8Array(buffer)));
+}
+
+const endMusic = new Audio();
+endMusic.src = makeBeepData(6); // 🔔 2 or 3 beeps
+endMusic.volume = 0.9;
+
+function makeOneBeep() {
+  const sampleRate = 44100;
+  const freq = 880;      // pitch of the beep
+  const duration = 0.12; // seconds
+
+  const samples = [];
+  const length = Math.floor(sampleRate * duration);
+
+  for (let i = 0; i < length; i++) {
+    samples.push(Math.sin(2 * Math.PI * freq * i / sampleRate));
+  }
+
+  const buffer = new ArrayBuffer(44 + samples.length * 2);
+  const view = new DataView(buffer);
+
+  const write = (o, s) =>
+    [...s].forEach((c, i) => view.setUint8(o + i, c.charCodeAt(0)));
+
+  write(0, "RIFF");
+  view.setUint32(4, 36 + samples.length * 2, true);
+  write(8, "WAVE");
+  write(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  write(36, "data");
+  view.setUint32(40, samples.length * 2, true);
+
+  let offset = 44;
+  samples.forEach(s => {
+    view.setInt16(offset, s * 0x7fff, true);
+    offset += 2;
+  });
+
+  return (
+    "data:audio/wav;base64," +
+    btoa(String.fromCharCode(...new Uint8Array(buffer)))
+  );
+}
+
+const coinSound = new Audio();
+coinSound.src = makeOneBeep();
+coinSound.volume = 0.5;
+
+
+
+/* =========================
+   Input
+========================= */
+const keys = {};
+window.addEventListener("keydown", e => keys[e.code] = true);
+window.addEventListener("keyup", e => keys[e.code] = false);
+
+/* =========================
+   Touch Controls
+========================= */
+function bindTouch(selector, key) {
+  const el = document.querySelector(selector);
+  if (!el) return;
+
+  el.addEventListener("touchstart", e => {
+    e.preventDefault();
+    keys[key] = true;
+  }, { passive: false });
+
+  el.addEventListener("touchend", e => {
+    e.preventDefault();
+    keys[key] = false;
+  }, { passive: false });
+
+  el.addEventListener("touchcancel", () => {
+    keys[key] = false;
+  });
+}
+
+bindTouch(".touch-left",  "ArrowLeft");
+bindTouch(".touch-right", "ArrowRight");
+bindTouch(".touch-jump",  "Space");
+
+
+/* =========================
+   Helpers
+========================= */
+const px = v => `calc(${v} * var(--pixel))`;
+
+function circleHit(a, b, r) {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  return Math.hypot(dx, dy) < r;
+}
+
+/* =========================
+   Game Loop
+========================= */
+function update() {
+  const left  = keys["ArrowLeft"] || keys["KeyA"];
+  const right = keys["ArrowRight"] || keys["KeyD"];
+  const jump  = keys["Space"] || keys["KeyW"];
+
+  // Horizontal movement
+  player.vx = 0;
+  if (left) player.vx = -MOVE_SPEED;
+  if (right) player.vx = MOVE_SPEED;
+
+  // Jump
+  if (jump && player.onGround) {
+    player.vy = JUMP_FORCE;
+    player.onGround = false;
+  }
+
+  // Gravity
+  player.vy += GRAVITY;
+
+  // Integrate
+  player.x += player.vx;
+  player.y += player.vy;
+  
+  // Screen bounds (left & right)
+  const MIN_X = player.radius;
+  const MAX_X = 240 - player.radius;
+  
+  if (player.x < MIN_X) player.x = MIN_X;
+  if (player.x > MAX_X) player.x = MAX_X;
+
+
+  // Ground collision (pixel-accurate)
+  const groundY = WORLD_HEIGHT - GROUND_HEIGHT - player.radius;
+  if (player.y >= groundY) {
+    player.y = groundY;
+    player.vy = 0;
+    player.onGround = true;
+  }
+
+  // Coin pickup
+  if (!coin.collected && circleHit(player, coin, 6)) {
+    coin.collected = true;
+    coinEl.style.display = "none";
+    coinSound.play().catch(() => {});
+  }
+
+  // Win
+  // Win (coin optional)
+  if (player.x > flagX) {
+  messageEl.style.display = "flex";
+  endMusic.play().catch(() => {});
+  document.querySelector(".bg-text").style.opacity = 0.15;
+  return;
+  }
+
+
+  render();
+  requestAnimationFrame(update);
+}
+
+/* =========================
+   Render
+========================= */
+function render() {
+  playerEl.style.left = px(player.x - player.radius);
+  playerEl.style.top  = px(player.y - player.radius);
+
+  coinEl.style.left = px(coin.x);
+  coinEl.style.top  = px(coin.y);
+
+  flagEl.style.left = px(flagX);
+}
+
+/* =========================
+   Init
+========================= */
+function init() {
+  player.y = WORLD_HEIGHT - GROUND_HEIGHT - player.radius;
+  update();
+}
+
+init();
+</script>
+</body>
+</html>
